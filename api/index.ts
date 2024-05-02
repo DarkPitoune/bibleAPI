@@ -1,12 +1,51 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
+
+const options = {
+  definition: {
+    openapi: "3.1.0",
+    info: {
+      title: "L'API de la Saint Bible de Jerusalem",
+      version: "0.1.0",
+      description:
+        "Obtenez les versets des écritures de la Sainte Bible de Jerusalem.",
+      license: {
+        name: "MIT",
+        url: "https://spdx.org/licenses/MIT.html",
+      },
+    },
+    servers: [
+      {
+        url: "https://bible-api-lovat.vercel.app/",
+      },
+      {
+        url: "http://localhost:8000/",
+      },
+    ],
+  },
+  apis: ["./index.ts"],
+};
+
 const app = express();
 
 let rawdata = fs.readFileSync(path.join(__dirname, "bible.json"));
 let bible = JSON.parse(rawdata);
 
-app.get("/", (req, res) => res.send("Welcome to the Bible API!"));
+const specs = swaggerJsdoc(options);
+app.get("/", swaggerUi.serve, swaggerUi.setup(specs));
+
+/**
+ * @swagger
+ * /book/:
+ *   get:
+ *     summary: Returns the list of all the books
+ *     responses:
+ *       200:
+ *         description: The list of the books' names
+ */
 app.get("/book/", (req, res) => res.send(Object.keys(bible)));
 app.get("/book/all", (req, res) => res.send(bible));
 app.get("/book/:book", (req, res) =>
