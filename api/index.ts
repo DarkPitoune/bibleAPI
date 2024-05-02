@@ -35,8 +35,8 @@ let rawdata = fs.readFileSync(path.join(__dirname, "bible.json"));
 let bible = JSON.parse(rawdata);
 
 const specs = swaggerJsdoc(options);
-app.get("/", swaggerUi.serve, swaggerUi.setup(specs));
-
+app.use("/swagger", swaggerUi.serve, swaggerUi.setup(specs));
+app.get("/", (req, res) => res.redirect("/swagger"));
 /**
  * @swagger
  * /book/:
@@ -47,6 +47,16 @@ app.get("/", swaggerUi.serve, swaggerUi.setup(specs));
  *         description: The list of the books' names
  */
 app.get("/book/", (req, res) => res.send(Object.keys(bible)));
+
+/**
+ * @swagger
+ * /book/all:
+ *  get:
+ *   summary: Returns the list of all the books with their chapters and verses
+ *  responses:
+ *  200:
+ *  description: The list of the books with their chapters and verses
+ */
 app.get("/book/all", (req, res) => res.send(bible));
 app.get("/book/:book", (req, res) =>
   res.send(Object.keys(bible[req.params.book]))
