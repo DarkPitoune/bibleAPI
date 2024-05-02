@@ -1,8 +1,9 @@
 const express = require("express");
 const fs = require("fs");
+const path = require("path");
 const app = express();
 
-let rawdata = fs.readFileSync("bible.json");
+let rawdata = fs.readFileSync(path.join(__dirname, "bible.json"));
 let bible = JSON.parse(rawdata);
 
 app.get("/", (req, res) => res.send("Welcome to the Bible API!"));
