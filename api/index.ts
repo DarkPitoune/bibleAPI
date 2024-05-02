@@ -5,7 +5,7 @@ const app = express();
 let rawdata = fs.readFileSync("bible.json");
 let bible = JSON.parse(rawdata);
 
-app.get("/", (req, res) => res.send("Express on Vercel"));
+app.get("/", (req, res) => res.send("Welcome to the Bible API!"));
 app.get("/book/", (req, res) => res.send(Object.keys(bible)));
 app.get("/book/all", (req, res) => res.send(bible));
 app.get("/book/:book", (req, res) =>
