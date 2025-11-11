@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const cors = require("cors");
 
 const options = {
   definition: {
@@ -30,6 +31,8 @@ const options = {
 };
 
 const app = express();
+
+app.use(cors());
 
 let rawdata = fs.readFileSync(path.join(__dirname, "bible.json"));
 let bible = JSON.parse(rawdata);
