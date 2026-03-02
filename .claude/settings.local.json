@@ -6,7 +6,8 @@
       "Bash(node:*)",
       "WebFetch(domain:gratis.bible)",
       "Bash(python3:*)",
-      "WebFetch(domain:www.aelf.org)"
+      "WebFetch(domain:www.aelf.org)",
+      "Bash(git checkout:*)"
     ]
   }
 }

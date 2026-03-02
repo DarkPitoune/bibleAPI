@@ -19,25 +19,37 @@ Production URL: `https://bible-api-lovat.vercel.app/`
 
 ### API (`api/index.ts`)
 
-Single Express app exporting for Vercel serverless. All routes are under `/book/`:
+Single Express app exporting for Vercel serverless. Routes:
 
-- `/book/` — list all book names
-- `/book/all` — entire Bible JSON
-- `/book/:book` — list chapters for a book
-- `/book/:book/all` — all verses for a book
-- `/book/:book/:chapter/` — list verses for a chapter
-- `/book/:book/:chapter/all` — all verses for a chapter
-- `/book/:book/:chapter/:verse` — single verse (verse numbers auto-padded to 2 digits)
+- `GET /books` — list all books (`[{ abbr, name }]`)
+- `GET /books/:abbr` — all chapters and verses for a book
+- `GET /books/:abbr/:chapter` — all verses for a chapter
+- `GET /books/:abbr/:chapter/:verse` — single verse (direct key lookup, no padding)
+- `GET /bible.json` — entire Bible data
+- `GET /bible.txt` — plain text (one verse per line)
+- `GET /swagger` — Swagger UI docs
 
-Root `/` redirects to `/swagger` (Swagger UI docs generated from JSDoc annotations).
+Root `/` redirects to `/swagger`.
 
 ### Data format (`api/bible.json`)
 
-Nested JSON: `{ "BookName": { "chapterNum": { "verseNum": "text" } } }`. Verse numbers are zero-padded strings (e.g., `"01"`, `"02"`).
+```json
+{
+  "books": [
+    { "abbr": "Gn", "name": "Livre de la Genèse", "chapters": { "1": { "1": "text", ... } } }
+  ]
+}
+```
+
+- Books: ordered array (canonical order), each with `abbr`, `name`, `chapters`
+- Chapters: object with string keys (including `"0"` for prologues, `"9A"`/`"9B"` for split Psalms)
+- Verses: object with string keys — unpadded (`"1"`, not `"01"`), non-numeric kept as-is (`"17A"`, `"1b"`, `"3-4"`)
+
+Key edge cases: Psalm chapter splits (`9A`, `9B`, `113A`, `113B`), Esther letter-suffixed verses (`1A`–`1L`, `17A`–`17Z`), chapter/verse `"0"` for prologues/liturgical markers, merged verse `"3-4"` (Tobie 9), sub-verse `"1b"` (Tobie 13), verses ≥ 100 (Ps 118, Dn 3).
 
 ### Scraper scripts (`scrapeAELFscripts/`)
 
-One-time scripts that scraped `aelf.org` to build `bible.json`. Not part of the deployed API. Entry point is `main.js`.
+One-time scripts that scraped `aelf.org` to build `bible.json`. Not part of the deployed API. The data has since been hand-revised.
 
 ### Deployment (`vercel.json`)
 
