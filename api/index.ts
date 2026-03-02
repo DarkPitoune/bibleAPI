@@ -2,7 +2,6 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const swaggerJsdoc = require("swagger-jsdoc");
-const swaggerUi = require("swagger-ui-express");
 const cors = require("cors");
 
 const options = {
@@ -38,7 +37,32 @@ let rawdata = fs.readFileSync(path.join(__dirname, "bible.json"));
 let bible = JSON.parse(rawdata);
 
 const specs = swaggerJsdoc(options);
-app.use("/swagger", swaggerUi.serve, swaggerUi.setup(specs));
+const SWAGGER_UI_VERSION = "5.17.2";
+const CDN = `https://unpkg.com/swagger-ui-dist@${SWAGGER_UI_VERSION}`;
+app.get("/swagger", (req, res) => {
+  res.type("html").send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>L'API de la Saint Bible de Jerusalem</title>
+  <link rel="stylesheet" type="text/css" href="${CDN}/swagger-ui.css">
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="${CDN}/swagger-ui-bundle.js"></script>
+  <script src="${CDN}/swagger-ui-standalone-preset.js"></script>
+  <script>
+    SwaggerUIBundle({
+      spec: ${JSON.stringify(specs)},
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+      layout: "StandaloneLayout"
+    });
+  </script>
+</body>
+</html>`);
+});
 app.get("/", (req, res) => res.redirect("/swagger"));
 /**
  * @swagger
