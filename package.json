@@ -11,8 +11,7 @@
     "axios": "^1.6.8",
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "node-html-parser": "^6.1.13",
-    "swagger-jsdoc": "^6.2.8"
+    "node-html-parser": "^6.1.13"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
