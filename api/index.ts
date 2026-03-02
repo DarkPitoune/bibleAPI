@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
-
+const { abbrToName, nameToAbbr } = require("./books");
 
 const app = express();
 
@@ -11,12 +11,19 @@ app.use(cors());
 let rawdata = fs.readFileSync(path.join(__dirname, "bible.json"));
 let bible = JSON.parse(rawdata);
 
-const bookParam = {
+function resolveBook(abbr) {
+  const fullName = abbrToName[abbr];
+  if (!fullName || !bible[fullName]) return null;
+  return { fullName, data: bible[fullName] };
+}
+
+const abbrParam = {
   in: "path",
-  name: "book",
+  name: "abbr",
   required: true,
   schema: { type: "string" },
-  description: "The book name (e.g. Genèse)",
+  description:
+    "The book abbreviation (e.g. Gn for Genèse, Ex for Exode). See GET /books for the full list.",
 };
 const chapterParam = {
   in: "path",
@@ -33,11 +40,13 @@ const verseParam = {
   description: "The verse number (auto-padded to 2 digits)",
 };
 
+const notFoundResponse = { description: "Resource not found" };
+
 const specs = {
   openapi: "3.1.0",
   info: {
     title: "L'API de la Saint Bible de Jerusalem",
-    version: "0.1.0",
+    version: "1.0.0",
     description:
       "Obtenez les versets des écritures de la Sainte Bible de Jerusalem.",
     license: { name: "MIT", url: "https://spdx.org/licenses/MIT.html" },
@@ -47,55 +56,67 @@ const specs = {
     { url: "http://localhost:8000/" },
   ],
   paths: {
-    "/book/": {
+    "/bible.json": {
       get: {
-        summary: "Returns the list of all the books",
-        responses: { 200: { description: "The list of the books' names" } },
-      },
-    },
-    "/book/all": {
-      get: {
-        summary: "Returns the entire Bible",
+        summary: "Returns the entire Bible as JSON",
         responses: {
-          200: { description: "All books with their chapters and verses" },
+          200: {
+            description:
+              "The entire Bible as a JSON object keyed by abbreviation",
+          },
         },
       },
     },
-    "/book/{book}": {
+    "/bible.txt": {
       get: {
-        summary: "Returns the list of chapters for a book",
-        parameters: [bookParam],
-        responses: { 200: { description: "The list of chapter numbers" } },
+        summary: "Returns the entire Bible as plain text",
+        responses: {
+          200: {
+            description:
+              "The entire Bible as plain text (one verse per line)",
+          },
+        },
       },
     },
-    "/book/{book}/all": {
+    "/books": {
+      get: {
+        summary: "Returns the list of all books with their abbreviations",
+        responses: {
+          200: {
+            description:
+              "Array of { abbr, name } objects for each book of the Bible",
+          },
+        },
+      },
+    },
+    "/books/{abbr}": {
       get: {
         summary: "Returns all chapters and verses for a book",
-        parameters: [bookParam],
+        parameters: [abbrParam],
         responses: {
           200: { description: "All chapters and verses for the book" },
+          404: notFoundResponse,
         },
       },
     },
-    "/book/{book}/{chapter}/": {
-      get: {
-        summary: "Returns the list of verses for a chapter",
-        parameters: [bookParam, chapterParam],
-        responses: { 200: { description: "The list of verse numbers" } },
-      },
-    },
-    "/book/{book}/{chapter}/all": {
+    "/books/{abbr}/{chapter}": {
       get: {
         summary: "Returns all verses for a chapter",
-        parameters: [bookParam, chapterParam],
-        responses: { 200: { description: "All verses for the chapter" } },
+        parameters: [abbrParam, chapterParam],
+        responses: {
+          200: { description: "All verses for the chapter" },
+          404: notFoundResponse,
+        },
       },
     },
-    "/book/{book}/{chapter}/{verse}": {
+    "/books/{abbr}/{chapter}/{verse}": {
       get: {
         summary: "Returns a single verse",
-        parameters: [bookParam, chapterParam, verseParam],
-        responses: { 200: { description: "The verse text" } },
+        parameters: [abbrParam, chapterParam, verseParam],
+        responses: {
+          200: { description: "The verse text" },
+          404: notFoundResponse,
+        },
       },
     },
   },
@@ -129,22 +150,56 @@ app.get("/swagger", (req, res) => {
 });
 app.get("/", (req, res) => res.redirect("/swagger"));
 
-app.get("/book/", (req, res) => res.send(Object.keys(bible)));
-app.get("/book/all", (req, res) => res.send(bible));
-app.get("/book/:book", (req, res) =>
-  res.send(Object.keys(bible[req.params.book]))
-);
-app.get("/book/:book/all", (req, res) => res.send(bible[req.params.book]));
-app.get("/book/:book/:chapter/", (req, res) =>
-  res.send(Object.keys(bible[req.params.book][req.params.chapter]))
-);
-app.get("/book/:book/:chapter/all", (req, res) =>
-  res.send(bible[req.params.book][req.params.chapter])
-);
-app.get("/book/:book/:chapter/:verse", (req, res) => {
-  req.params.verse =
-    req.params.verse.length === 1 ? `0${req.params.verse}` : req.params.verse;
-  res.send(bible[req.params.book][req.params.chapter][req.params.verse]);
+app.get("/bible.json", (req, res) => res.json(bible));
+
+app.get("/bible.txt", (req, res) => {
+  const lines = [];
+  for (const [fullName, chapters] of Object.entries(bible)) {
+    const abbr = nameToAbbr[fullName] || fullName;
+    for (const [ch, verses] of Object.entries(chapters)) {
+      for (const [v, text] of Object.entries(verses)) {
+        lines.push(`${abbr} ${ch},${v} ${text}`);
+      }
+    }
+  }
+  res.type("text/plain").send(lines.join("\n"));
+});
+
+app.get("/books", (req, res) => {
+  const books = Object.entries(abbrToName).map(([abbr, name]) => ({
+    abbr,
+    name,
+  }));
+  res.json(books);
+});
+
+app.get("/books/:abbr", (req, res) => {
+  const book = resolveBook(req.params.abbr);
+  if (!book) return res.status(404).json({ error: "Book not found" });
+  res.json(book.data);
+});
+
+app.get("/books/:abbr/:chapter", (req, res) => {
+  const book = resolveBook(req.params.abbr);
+  if (!book) return res.status(404).json({ error: "Book not found" });
+  const chapter = book.data[req.params.chapter];
+  if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+  res.json(chapter);
+});
+
+app.get("/books/:abbr/:chapter/:verse", (req, res) => {
+  const book = resolveBook(req.params.abbr);
+  if (!book) return res.status(404).json({ error: "Book not found" });
+  const chapter = book.data[req.params.chapter];
+  if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+  const verseKey =
+    req.params.verse.length === 1
+      ? `0${req.params.verse}`
+      : req.params.verse;
+  const verse = chapter[verseKey];
+  if (verse === undefined)
+    return res.status(404).json({ error: "Verse not found" });
+  res.json(verse);
 });
 
 app.listen(8000, () => console.log("Server ready on port 8000."));

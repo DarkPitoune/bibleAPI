@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(curl:*)",
-      "WebFetch(domain:bible-api-lovat.vercel.app)"
+      "WebFetch(domain:bible-api-lovat.vercel.app)",
+      "Bash(node:*)",
+      "WebFetch(domain:gratis.bible)",
+      "Bash(python3:*)",
+      "WebFetch(domain:www.aelf.org)"
     ]
   }
 }
