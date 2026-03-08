@@ -7,7 +7,13 @@
       "WebFetch(domain:gratis.bible)",
       "Bash(python3:*)",
       "WebFetch(domain:www.aelf.org)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:bibleinayearonline.com)",
+      "Bash(jq:*)",
+      "Bash(pdftotext -layout \"/Users/pierre.dhebrail/.claude/projects/-Users-pierre-dhebrail-Documents-perso-bibleAPI/f9899cfc-9b52-4066-9e19-83cf94bf48b5/tool-results/webfetch-1772959475673-ggfdyp.pdf\" /tmp/readingplan.txt)",
+      "Read(//tmp/**)",
+      "Bash(source:*)",
+      "Bash(.venv/bin/python:*)"
     ]
   }
 }

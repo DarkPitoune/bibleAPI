@@ -11,6 +11,10 @@ const bibleData = JSON.parse(
   fs.readFileSync(path.join(__dirname, "bible.json"), "utf-8")
 );
 
+const readingPlan = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "readingplan.json"), "utf-8")
+);
+
 const bookByAbbr = {};
 for (const book of bibleData.books) {
   bookByAbbr[book.abbr] = book;
@@ -120,6 +124,31 @@ const specs = {
         },
       },
     },
+    "/bible-in-a-year/program": {
+      get: {
+        summary:
+          "Returns the full Bible-in-a-Year reading plan (365 days)",
+        responses: {
+          200: {
+            description:
+              "Array of 365 daily entries, each with date and readings. Each reading has a book abbreviation and a chapters object mapping chapter keys to arrays of verse keys.",
+          },
+        },
+      },
+    },
+    "/bible-in-a-year/today": {
+      get: {
+        summary:
+          "Returns today's Bible-in-a-Year reading with full verse texts",
+        responses: {
+          200: {
+            description:
+              "Today's entry with date and readings. Each reading includes book, bookName, and chapters with verse texts.",
+          },
+          404: notFoundResponse,
+        },
+      },
+    },
   },
 };
 
@@ -205,6 +234,34 @@ app.get("/books/:abbr/:chapter/:verse", (req, res) => {
   if (verse === undefined)
     return res.status(404).json({ error: "Verse not found" });
   res.json(verse);
+});
+
+app.get("/bible-in-a-year/program", (req, res) => {
+  res.json(readingPlan);
+});
+
+app.get("/bible-in-a-year/today", (req, res) => {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const today = `${mm}-${dd}`;
+
+  const entry = readingPlan.find((d) => d.date === today);
+  if (!entry) return res.status(404).json({ error: "No reading for today" });
+
+  const readings = entry.readings.map((r) => {
+    const book = bookByAbbr[r.book];
+    const chapters = {};
+    for (const [ch, verseKeys] of Object.entries(r.chapters)) {
+      chapters[ch] = {};
+      for (const v of verseKeys) {
+        chapters[ch][v] = book.chapters[ch][v];
+      }
+    }
+    return { book: r.book, bookName: book.name, chapters };
+  });
+
+  res.json({ date: entry.date, readings });
 });
 
 app.listen(8000, () => console.log("Server ready on port 8000."));
